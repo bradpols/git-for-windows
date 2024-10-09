@@ -1,0 +1,32 @@
+name: SSH issue demo for issue 5091
+
+on: push
+
+env:
+  DEVELOPER: 1
+
+jobs:
+  ssh-issue-demo:
+    runs-on: windows-2022
+    env:
+      WINDBG_DIR: "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64"
+      IMAGE: mcr.microsoft.com/windows/servercore:ltsc2022
+
+    steps:
+      - name: pull servercore image
+        shell: bash
+        run: docker pull $IMAGE
+      - name: ssh issue demonstration
+        shell: bash
+        run: |
+          docker run \
+            --user "ContainerAdministrator" \
+            -v "$WINDBG_DIR:C:/dbg" \
+            $IMAGE powershell.exe -Command '
+              echo "Preparing to run test"
+              $ProgressPreference = "SilentlyContinue"
+              Invoke-WebRequest "https://github.com/git-for-windows/git/releases/download/v2.47.0.windows.1/Git-2.47.0-64-bit.exe" -OutFile .\Git.exe
+              Start-Process -FilePath ".\Git.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait
+              Remove-Item .\Git.exe
+              & "C:\Program Files\Git\bin\bash.exe" -c "{ ssh-keygen & } ; sleep 2 ; exit 0"
+            '
